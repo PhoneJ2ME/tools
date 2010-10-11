@@ -34,7 +34,11 @@
 <!-- stylesheet parameter: name of file with overrides -->
 <xsl:param name="overrideFile"></xsl:param>
 
-<xsl:variable name="constantOverrides" select="document($overrideFile)"/>
+<!-- map from constant name to constant node -->
+<xsl:key 
+    name="constantOverrides" 
+    match="/configuration/constants/constant_class/constant" 
+    use="@Name"/>
 
 <xsl:template match="@* | node()">
     <xsl:copy>
@@ -48,7 +52,9 @@
 
     <!-- lookup for overridden value  -->
     <xsl:variable name="newValue">
-        <xsl:value-of select="$constantOverrides/configuration/constants/constant_class/constant[@Name = $constantName][1]/@Value"/>
+        <xsl:for-each select="document($overrideFile)">
+            <xsl:value-of select="key('constantOverrides', $constantName)[1]/@Value"/>
+        </xsl:for-each>
     </xsl:variable>
 
     <!-- output 'Value' attribute -->

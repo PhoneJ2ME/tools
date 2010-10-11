@@ -24,13 +24,10 @@
  * information or have any questions.
  */
 
-package com.sun.uig;
+package com.sun.ams.ui;
 
 
-public class CommandListenerAdapter implements CommandListener {
-    public void onCommand(Screen sender, int commandId) {
-    }
-
-    public void onDynamicCommand(Screen sender, int commandId, int idx) {
-    }
+public interface CommandListener {
+    public void onCommand(Screen sender, int commandId);
+    public void onDynamicCommand(Screen sender, int commandId, int idx);
 }

@@ -46,18 +46,14 @@ information or have any questions.
 
     <xs:element name="screen">
         <xs:complexType>
-            <xs:sequence>
-                <xs:element ref="title" minOccurs="0" maxOccurs="1"/>
-                <xs:choice minOccurs="0" maxOccurs="unbounded">
-                    <xs:element ref="filler"/>
-                    <xs:element ref="text"/>
-                    <xs:element ref="options"/>
-                    <xs:element ref="command"/>
-                    <xs:element ref="dynamic-command"/>
-                    <xs:element ref="progress"/>
-                    <xs:element ref="text-field"/>
-                </xs:choice>
-            </xs:sequence>
+            <xs:choice minOccurs="0" maxOccurs="unbounded">
+                <xs:element ref="filler"/>
+                <xs:element ref="text"/>
+                <xs:element ref="options"/>
+                <xs:element ref="command"/>
+                <xs:element ref="dynamic-command"/>
+                <xs:element ref="progress"/>
+            </xs:choice>
             <xs:attribute name="name" use="required">
                 <xs:simpleType>
                     <xs:restriction base='xs:string'>
@@ -67,14 +63,9 @@ information or have any questions.
             </xs:attribute>
         </xs:complexType>
         <xs:unique name="id_attr_should_be_unique_across_all_descendant_elements_of_a_screen_element">
-            <xs:selector xpath="options/option|options/dynamic-option|command|dynamic-command|progress|text-field"/>
+            <xs:selector xpath="options/option|options/dynamic-option|command|dynamic-command|progress"/>
             <xs:field xpath="@id"/>
         </xs:unique>
-    </xs:element>
-
-
-    <xs:element name="title">
-        <xs:complexType mixed="true"/>
     </xs:element>
 
 
@@ -161,42 +152,7 @@ information or have any questions.
             <xs:all minOccurs="0">
                 <xs:element ref="label"/>
             </xs:all>
-            <xs:attribute name="id" type="id-type" use="required"/>
-            <xs:attribute name="align">
-                <xs:simpleType>
-                    <xs:restriction base='xs:string'>
-                        <xs:enumeration value='left'/>
-                        <xs:enumeration value='right'/>
-                        <xs:enumeration value='center'/>
-                    </xs:restriction>
-                </xs:simpleType>
-            </xs:attribute>
-        </xs:complexType>
-    </xs:element>
-
-
-    <xs:element name="text-field">
-        <xs:complexType>
-            <xs:all minOccurs="0">
-                <xs:element ref="label"/>
-            </xs:all>
-            <xs:attribute name="id" type="id-type" use="required"/>
-            <xs:attribute name="style">
-                <xs:simpleType>
-                    <xs:restriction base='xs:string'>
-                        <xs:enumeration value='plain'/>
-                        <xs:enumeration value='password'/>
-                    </xs:restriction>
-                </xs:simpleType>
-            </xs:attribute>
-            <xs:attribute name="maxchars" use="required">
-                <xs:simpleType>
-                    <xs:restriction base="xs:integer">
-                        <xs:minInclusive value="1"/>
-                        <xs:maxInclusive value="10000"/>
-                    </xs:restriction>
-                </xs:simpleType>
-            </xs:attribute>
+            <xs:attribute name="id" type="id-type" use="required" />
         </xs:complexType>
     </xs:element>
 

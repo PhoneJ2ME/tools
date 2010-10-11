@@ -94,8 +94,6 @@ DEFAULT_FLAGS = \
 	USE_VERBOSE_MAKE=true \
 	CVM_SYMBOLS=true \
 	CVM_PRELOAD_LIB=true \
-
-MIDP_FLAGS = \
 	USE_MIDP=true \
 	USE_JPEG=true \
 	CVM_INCLUDE_JAVACALL=false \
@@ -130,7 +128,7 @@ SOURCE_OUTPUT_DIR=$(COMPONENTS_DIR)/cdc/install/pmea_mr2
 source_bundle: source_bundles
 source_bundles:
 	$(TRACE_BUILD_START)
-	make source_bundles $(DEFAULT_FLAGS) $(MIDP_FLAGS) \
+	make source_bundles $(DEFAULT_FLAGS) \
 		SOURCE_OUTPUT_DIR=$(SOURCE_OUTPUT_DIR) \
 		BUNDLE_PORTS="win32-arm-*" \
 		$(SUBMAKE_MAKEFLAGS_NO_TARGETS)
@@ -144,10 +142,4 @@ source_bundles:
 opt_preload_jit:
 	$(TRACE_BUILD_START)
 	$(AT)make $(DEFAULT_FLAGS) $(SUBMAKE_MAKEFLAGS)
-	$(TRACE_BUILD_END)
-
-.PHONY: opt_preload_jit_midp
-opt_preload_jit_midp:
-	$(TRACE_BUILD_START)
-	$(AT)make $(DEFAULT_FLAGS) $(MIDP_FLAGS) $(SUBMAKE_MAKEFLAGS)
 	$(TRACE_BUILD_END)

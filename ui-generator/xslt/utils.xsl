@@ -24,180 +24,130 @@ information or have any questions.
 -->
 
 <xsl:stylesheet version="2.0"
-                xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-                xmlns:xs="http://www.w3.org/2001/XMLSchema"
-                xmlns:uig="foo://sun.me.ui-generator.net/">
+    xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+    xmlns:fn="http://www.w3.org/2005/xpath-functions">
 
     <!--
-        Context independent utility stuff
+        Utility templates that doesn't depend on context item
     -->
-
-    <xsl:param name="terminate-on-error">yes</xsl:param>
-
-    <!--
-        Converts class name in file path.
-    -->
-    <xsl:function name="uig:classname-to-filepath">
-        <xsl:param name="classname" as="xs:string"/>
+    <xsl:template name="classname2filepath">
+        <xsl:param name="classname"/>
         <xsl:value-of select="concat($output-java-dir,'/',$classname,'.java')"/>
-    </xsl:function>
+    </xsl:template>
+
+    <xsl:template name="toupper">
+        <xsl:param name="str"/>
+        <xsl:value-of select="translate($str, 'abcdefghijklmnopqrstuvwxyz', 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')"/>
+    </xsl:template>
+
+    <xsl:template name="replace">
+        <xsl:param name="str"/>
+        <xsl:param name="from"/>
+        <xsl:param name="to"/>
+
+        <xsl:variable name="head" select="substring-before($str, $from)"/>
+        <xsl:value-of select="$head"/>
+        <xsl:choose>
+            <xsl:when test="$from=substring($str,string-length($head)+1,string-length($from))">
+                <xsl:value-of select="$to"/>
+                <xsl:call-template name="replace">
+                    <xsl:with-param name="str" select="substring($str,string-length($head)+string-length($from)+1)"/>
+                    <xsl:with-param name="from" select="$from"/>
+                    <xsl:with-param name="to" select="$to"/>
+                </xsl:call-template>
+            </xsl:when>
+            <xsl:otherwise>
+                <xsl:value-of select="$str"/>
+            </xsl:otherwise>
+        </xsl:choose>
+    </xsl:template>
 
 
-    <!--
-        Utility functions to handle format strings.
-    -->
-    <xsl:function name="uig:format-string-get-args" as="xs:string*">
-        <xsl:param name="str" as="xs:string"/>
-        <xsl:sequence select="uig:format-string-base($str, 'get-args')"/>
-    </xsl:function>
-
-    <xsl:function name="uig:format-string-get-self" as="xs:string">
-        <xsl:param name="str" as="xs:string"/>
-        <xsl:value-of>
-            <xsl:for-each select="uig:format-string-base($str, 'get-self')">
-                <xsl:value-of select="."/>
+    <xsl:template name="uniq">
+        <xsl:param name="str"/>
+        <xsl:variable name="res">
+            <xsl:for-each select="fn:distinct-values(tokenize($str, '&#10;'))">
+                <xsl:if test=".">
+                    <xsl:copy-of select="concat(.,'&#10;')"/>
+                </xsl:if>
             </xsl:for-each>
-        </xsl:value-of>
-    </xsl:function>
+        </xsl:variable>
+        <xsl:value-of select="fn:replace($res,'&#10; ','&#10;')"/>
+    </xsl:template>
 
-    <xsl:function name="uig:format-string-base" as="xs:string*">
-        <xsl:param name="str"       as="xs:string"/>
-        <xsl:param name="action"    as="xs:string"/>
-        <xsl:sequence select="
-            uig:format-string-base-impl(
-                $str,
-                $action,
-                number('0'),
-                replace(
-                    translate($str, '%', '&#333;'),
-                    '&#333;&#333;',
-                    '%%'))"/>
-    </xsl:function>
 
-    <xsl:function name="uig:format-string-base-impl" as="xs:string*">
-        <xsl:param name="str"           as="xs:string"/>
-        <xsl:param name="action"        as="xs:string"/>
-        <xsl:param name="level"         as="xs:double"/>
-        <xsl:param name="filtered-str"  as="xs:string"/>
+    <xsl:template name="expand">
+        <xsl:param name="str"/>
+        <xsl:param name="action"/>
+        <xsl:param name="action-arg0"/>
+        <xsl:param name="level" select="number('0')"/>
+        <xsl:param name="filtered-str">
+            <xsl:text>"</xsl:text>
+            <xsl:call-template name="replace">
+                <xsl:with-param name="str" select="translate($str, '%', '&#333;')"/>
+                <xsl:with-param name="from" select="'&#333;&#333;'"/>
+                <xsl:with-param name="to" select="'%%'"/>
+            </xsl:call-template>
+            <xsl:text>"</xsl:text>
+        </xsl:param>
 
         <xsl:variable name="tail" select="substring-after($filtered-str, '&#333;')"/>
         <xsl:choose>
             <xsl:when test="$tail">
-                <xsl:variable name="argname" select="substring-before($tail, '&#333;')"/>
-                <xsl:if test="not($argname)">
+                <xsl:variable name="varname" select="substring-before($tail, '&#333;')"/>
+                <xsl:if test="not($varname)">
                     <xsl:message terminate="yes">
                         <xsl:text>Missing '%' character detected in: "</xsl:text>
                         <xsl:value-of select="$str"/>
                         <xsl:text>"&#10;</xsl:text>
                     </xsl:message>
                 </xsl:if>
+                <xsl:variable name="keyname">
+                    <xsl:text>KEY_</xsl:text>
+                    <xsl:call-template name="toupper">
+                        <xsl:with-param name="str" select="$varname"/>
+                    </xsl:call-template>
+                </xsl:variable>
                 <xsl:choose>
-                    <xsl:when test="$action='get-args'">
-                        <xsl:value-of select="$argname"/>
+                    <xsl:when test="$action='get-printf-args'">
+                        <xsl:value-of select="concat('getProperty(',$keyname,'), ')"/>
                     </xsl:when>
-                    <xsl:when test="$action='get-self'">
-                        <xsl:value-of>
-                            <xsl:value-of select="substring-before($filtered-str, '&#333;')"/>
-                            <xsl:text>%</xsl:text>
-                            <xsl:value-of select="$level"/>
-                        </xsl:value-of>
+                    <xsl:when test="$action='define-argkey'">
+                        <xsl:text>    public final static String </xsl:text>
+                        <xsl:value-of select="$keyname"/>
+                        <xsl:text>="</xsl:text>
+                        <xsl:value-of select="$varname"/>
+                        <xsl:text>";&#10;</xsl:text>
+                    </xsl:when>
+                    <xsl:when test="$action='get-printf-format'">
+                        <xsl:value-of select="substring-before($filtered-str, '&#333;')"/>
+                        <xsl:text>%</xsl:text>
+                        <xsl:value-of select="$level"/>
+                    </xsl:when>
+                    <xsl:when test="$action='utest-get-value'">
+                        <xsl:text>                    else if (</xsl:text>
+                        <xsl:value-of select="concat($action-arg0,$keyname)"/>
+                        <xsl:text>.equals(key)) return "&lt;</xsl:text>
+                        <xsl:value-of select="$varname"/>
+                        <xsl:text>&gt;";&#10;</xsl:text>
                     </xsl:when>
                 </xsl:choose>
-                <xsl:sequence select="
-                    uig:format-string-base-impl(
-                        $str,
-                        $action,
-                        number($level + 1),
-                        substring-after($tail, '&#333;'))"/>
+                <xsl:call-template name="expand">
+                    <xsl:with-param name="str" select="$str"/>
+                    <xsl:with-param name="action" select="$action"/>
+                    <xsl:with-param name="action-arg0" select="$action-arg0"/>
+                    <xsl:with-param name="level" select="number($level + 1)"/>
+                    <xsl:with-param name="filtered-str" select="substring-after($tail, '&#333;')"/>
+                </xsl:call-template>
             </xsl:when>
-            <xsl:when test="$action='get-self'">
+            <xsl:when test="$action='get-printf-format'">
                 <xsl:value-of select="$filtered-str"/>
             </xsl:when>
         </xsl:choose>
-    </xsl:function>
-
-
-    <!--
-        Returns sequence of all elements that may have format strings.
-    -->
-    <xsl:function name="uig:get-all-format-string-elements" as="element()*">
-        <xsl:param name="ctx" as="document-node()"/>
-        <xsl:sequence select="$ctx//(option|label|text|command|title)"/>
-    </xsl:function>
-
-    <!--
-        Returns sequence of child elements of the given element that may have
-        format strings.
-    -->
-    <xsl:function name="uig:get-format-string-elements" as="element()*">
-        <xsl:param name="ctx" as="element()"/>
-        <xsl:sequence select="$ctx//(option|label|text|command|title)"/>
-    </xsl:function>
-
-    <!--
-        Returns 'true' if the given element may have format string.
-    -->
-    <xsl:function name="uig:is-format-string" as="xs:boolean">
-        <xsl:param name="e" as="element()"/>
-        <xsl:value-of select="
-            count(uig:get-format-string-elements(
-                $e/ancestor-or-self::screen)[generate-id(.) = generate-id($e)]) != 0"/>
-    </xsl:function>
-
-
-    <!--
-        Increases indentation and strips trailing
-        whitespace in the given multi-line string.
-    -->
-    <xsl:function name="uig:add-indentation" as="xs:string">
-        <xsl:param name="text" as="xs:string"/>
-        <xsl:param name="ident" as="xs:string"/>
-        <xsl:value-of select="
-                replace(
-                    replace($text, '^', $ident, 'm'),
-                    '^[ ]{1,};&#10;',
-                    '',
-                    'm')"/>
-    </xsl:function>
-
-    <xsl:template name="add-indentation">
-        <xsl:param name="text" as="xs:string"/>
-        <xsl:param name="ident" as="xs:string"/>
-        <xsl:value-of select="uig:add-indentation($text, $ident)"/>
     </xsl:template>
 
 
-    <!--
-        Report error.
-    -->
-    <xsl:template name="error">
-        <xsl:param name="msg"/>
-
-        <xsl:message terminate="{$terminate-on-error}">
-            <xsl:text>Error: </xsl:text>
-            <xsl:value-of select="$msg"/>
-            <xsl:text>; path=</xsl:text>
-            <xsl:value-of select="saxon:path()"
-                            xmlns:saxon="http://saxon.sf.net/"/>
-        </xsl:message>
-    </xsl:template>
-
-    <!--
-        Report that default template rule that should not be executed is
-        triggered as there is no template rule that overwrites it.
-    -->
-    <xsl:template name="error-not-implemented">
-        <xsl:call-template name="error">
-            <xsl:with-param name="msg">Template rule not implemented</xsl:with-param>
-        </xsl:call-template>
-    </xsl:template>
-
-    <!--
-        Report that template rule that should never be executed is triggered.
-    -->
-    <xsl:template name="error-unexpected">
-        <xsl:call-template name="error">
-            <xsl:with-param name="msg">Template rule should never get called</xsl:with-param>
-        </xsl:call-template>
+    <xsl:template name="fatal">
+        <xsl:message terminate="yes">This rule must never get called, it must be overridden.&#10;</xsl:message>
     </xsl:template>
 </xsl:stylesheet>

@@ -22,14 +22,15 @@
  * information or have any questions.
  */
 
-package com.sun.uig;
+package com.sun.ams.ui;
 
-public abstract class BaseScreen {
-    final protected Object layoutLock = new Object();
-
-    private BaseScreenStack     stack;
+public abstract class BaseScreen implements StringIds {
+    BaseScreenStack             stack;
     private ScreenProperties    props;
-    private Strings             strings;
+
+    private static String localizeString(int id) {
+        return StringTable.getString(id);
+    }
 
     private static String printfImpl(String format, Object args[]) {
         StringBuffer returnString = new StringBuffer();
@@ -61,32 +62,17 @@ public abstract class BaseScreen {
         return returnString.toString();
     }
 
-    void setParentStack(BaseScreenStack stack) {
-        this.stack = stack;
-    }
-
-    boolean isParentStack(BaseScreenStack stack) {
-        return (this.stack == stack);
-    }
-
-    protected String printf(int id, Object args[]) {
-        return printfImpl(strings.getString(id), args);
+    static String printf(int id, Object args[]) {
+        return printfImpl(localizeString(id), args);
     }
 
     protected Object getProperty(String key) {
         return props.get(key);
     }
 
-    protected BaseScreen(ScreenProperties props, Strings strings) {
+    public BaseScreen(ScreenProperties props) {
         this.props = props;
-        this.strings = strings;
     }
-
-    public abstract void update();
-
-    public abstract void showSpinner();
-
-    public abstract void hideSpinner();
 
     private static void test(String format, String expected) {
         String res =

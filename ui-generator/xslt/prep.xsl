@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <!--
-Copyright  1990-2009 Sun Microsystems, Inc. All Rights Reserved.
+Copyright  1990-2008 Sun Microsystems, Inc. All Rights Reserved.
 DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER
 
 This program is free software; you can redistribute it and/or
@@ -23,27 +23,34 @@ Clara, CA 95054 or visit www.sun.com if you need additional
 information or have any questions.
 -->
 
-<xsl:stylesheet version="2.0"
-                xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-                xmlns:xs="http://www.w3.org/2001/XMLSchema"
-                xmlns:uig="foo://sun.me.ui-generator.net/">
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
-    <xsl:param name="toolkit-traits"/>
+    <xsl:output method="xml" encoding="utf8" indent="yes"/>
 
-    <xsl:variable name="toolkit-traits-doc" as="document-node()">
-        <xsl:document>
-            <traits>
-                <xsl:if test="$toolkit-traits">
-                    <xsl:apply-templates select="doc($toolkit-traits)/traits/*" mode="traits-load"/>
-                </xsl:if>
-            </traits>
-        </xsl:document>
-    </xsl:variable>
-
-    <xsl:template match="/*|*|@*|text()" mode="traits-load">
+    <xsl:template match="/*">
         <xsl:copy>
-            <xsl:apply-templates select="*|@*|text()" mode="traits-load"/>
+            <xsl:apply-templates select="*"/>
         </xsl:copy>
     </xsl:template>
 
+    <xsl:template match="label[not(text)]|option[not(text)]|command[not(text)]">
+        <xsl:element name="{name()}">
+            <xsl:apply-templates select="@*|comment()"/>
+            <xsl:element name="text">
+                <xsl:apply-templates select="node()"/>
+            </xsl:element>
+        </xsl:element>
+    </xsl:template>
+
+    <xsl:template match="progress">
+        <progress pid="{@id}">
+            <xsl:apply-templates select="node()|comment()"/>
+        </progress>
+    </xsl:template>
+
+    <xsl:template match="@*|node()|comment()">
+        <xsl:copy>
+            <xsl:apply-templates select="@*|node()|comment()"/>
+        </xsl:copy>
+  </xsl:template>
 </xsl:stylesheet>

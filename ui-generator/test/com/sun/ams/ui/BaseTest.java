@@ -24,11 +24,9 @@
  * information or have any questions.
  */
 
-package com.sun.uig;
+package com.sun.ams.ui;
 
 
-public interface TextFieldAccessor {
-    public String getTextFieldValue(Object itemId);
-
-    public void setTextFieldValue(Object itemId, String value);
+class BaseTest {
+    static ScreenStack screens;
 }

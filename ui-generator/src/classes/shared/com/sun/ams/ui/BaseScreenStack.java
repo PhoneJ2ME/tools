@@ -22,7 +22,7 @@
  * information or have any questions.
  */
 
-package com.sun.uig;
+package com.sun.ams.ui;
 
 import java.util.Stack;
 
@@ -55,9 +55,9 @@ public abstract class BaseScreenStack {
         }
 
         synchronized (screen) {
-            if (screen.isParentStack(this)) {
+            if (screen.stack == this) {
                 screens.removeElement(screen);
-            } else if (!screen.isParentStack(null)) {
+            } else if (screen.stack != null) {
                 throw new IllegalArgumentException(
                     "Screen is already on a stack");
             }
@@ -70,7 +70,7 @@ public abstract class BaseScreenStack {
                     "Screen is already on a stack");
             }
 
-            screen.setParentStack(this);
+            screen.stack = this;
             screens.push(screen);
         }
 
@@ -125,7 +125,7 @@ public abstract class BaseScreenStack {
         if (autoHide && screens.size() > 1) {
             synchronized (screen) {
                 screens.removeElement(screen);
-                screen.setParentStack(null);
+                screen.stack = null;
             }
 
             showScreen((Screen)screens.peek());
@@ -136,7 +136,7 @@ public abstract class BaseScreenStack {
         Screen screen = (Screen)screens.peek();
         synchronized (screen) {
             screens.pop();
-            screen.setParentStack(null);
+            screen.stack = null;
         }
     }
 
@@ -169,7 +169,7 @@ public abstract class BaseScreenStack {
         }
 
         synchronized (screen) {
-            if (!screen.isParentStack(this)) {
+            if (screen.stack != this) {
                 throw new IllegalArgumentException(
                     "Screen not on this stack");
             }
@@ -179,14 +179,14 @@ public abstract class BaseScreenStack {
                     pop();
                 } else {
                     screens.removeElement(screen);
-                    screen.setParentStack(null);
+                    screen.stack = null;
                 }
 
                 showScreen((Screen)screens.peek());
                 notifyAll();
             }
 
-            return (screen.isParentStack(null));
+            return (screen.stack == null);
         }
     }
 
@@ -224,6 +224,7 @@ public abstract class BaseScreenStack {
         }
 
         destroyed = true;
+
         if (screens != null) {
             for (int i = 0, count = screens.size(); i < count; ++i) {
                 pop();

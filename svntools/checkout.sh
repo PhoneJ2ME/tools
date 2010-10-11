@@ -68,42 +68,23 @@ if [ $# -gt 0 -a -r "$1" ] ; then
     exec < $1
 fi
 
-docmd () {
-    echo $*
-    if [ ! "$OPTN" ]; then
-        "$@"
-    fi
-}
-
 while read repourl base ; do
     # echo '<' $repourl $base
     if [ ! -d $base ] ; then
-        docmd svn co $OPTQ $repourl $base
+        cmd=(svn co $OPTQ $repourl $base)
     elif svn info $base > $TMP ; then
         wcurl=$(awk '$1 == "URL:" { print $2 }' $TMP)
-        wcbase=$(awk '/^Repository Root:/ { print $3 }' $TMP)
-        wcuuid=$(awk '/^Repository UUID:/ { print $3 }' $TMP)
-	svn info $repourl > $TMP
-        repobase=$(awk '/^Repository Root:/ { print $3 }' $TMP)
-        repouuid=$(awk '/^Repository UUID:/ { print $3 }' $TMP)
-        if [ $repobase != $wcbase ]; then
-            if [ $repouuid != $wcuuid ]; then
-                echo UUID mismatch.  Skipping $repourl.
-                continue
-            fi
-            wcpath=$(awk -v X=$wcurl -v Y=$wcbase \
-                'BEGIN {print substr(X, length(Y)+2)}')
-            newurl=$repobase/$wcpath
-            docmd svn switch --relocate $OPTQ $wcurl $newurl $base
-	    svn info $base > $TMP
-            wcurl=$(awk '$1 == "URL:" { print $2 }' $TMP)
-        fi
         if [ "$repourl" = "$wcurl" ] ; then
-            docmd svn update $OPTQ $base
+            cmd=(svn update $OPTQ $repourl $base)
         else
-            docmd svn switch $OPTQ $repourl $base
+            cmd=(svn switch $OPTQ $repourl $base)
         fi
     else
         continue
+    fi
+
+    echo ${cmd[*]}
+    if [ ! "$OPTN" ]; then
+        "${cmd[@]}"
     fi
 done

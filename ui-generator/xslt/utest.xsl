@@ -23,10 +23,7 @@ Clara, CA 95054 or visit www.sun.com if you need additional
 information or have any questions.
 -->
 
-<xsl:stylesheet version="2.0"
-                xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-                xmlns:xs="http://www.w3.org/2001/XMLSchema"
-                xmlns:uig="foo://sun.me.ui-generator.net/">
+<xsl:stylesheet version="2.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
     <!--
         Output unit tests for screen classes
@@ -38,10 +35,14 @@ information or have any questions.
 
 
     <!--
-        Output TestClassList text file
+        Output TestClassList class
     -->
     <xsl:template name="TestClassList">
-        <xsl:variable name="href" select="concat($output-java-dir,'/TestClassList.txt')"/>
+        <xsl:variable name="href">
+            <xsl:call-template name="classname2filepath">
+                <xsl:with-param name="classname" select="'TestClassList'"/>
+            </xsl:call-template>
+        </xsl:variable>
         <xsl:value-of select="concat($href,'&#10;')"/>
         <xsl:result-document href="{$href}">
             <xsl:call-template name="TestClassList-impl"/>
@@ -49,14 +50,22 @@ information or have any questions.
     </xsl:template>
 
     <xsl:template name="TestClassList-impl">
+        <xsl:text>package </xsl:text>
+        <xsl:value-of select="$package-name"/>
+        <xsl:text>;&#10;&#10;&#10;</xsl:text>
+        <xsl:text>final class TestClassList {&#10;</xsl:text>
+        <xsl:text>    static final String names[] = new String[] {&#10;</xsl:text>
         <xsl:apply-templates select="//screen" mode="TestClassList-element"/>
+        <xsl:text>    };&#10;</xsl:text>
+        <xsl:text>}&#10;</xsl:text>
     </xsl:template>
 
     <xsl:template match="screen" mode="TestClassList-element">
+        <xsl:text>        "</xsl:text>
         <xsl:value-of select="$package-name"/>
         <xsl:text>.</xsl:text>
-        <xsl:value-of select="uig:UTest-classname(.)"/>
-        <xsl:text>&#10;</xsl:text>
+        <xsl:apply-templates select="." mode="UTest-classname"/>
+        <xsl:text>",&#10;</xsl:text>
     </xsl:template>
 
 
@@ -64,7 +73,13 @@ information or have any questions.
         Output screen unit test class
     -->
     <xsl:template match="screen" mode="UTest-class">
-        <xsl:variable name="href" select="uig:classname-to-filepath(uig:UTest-classname(.))"/>
+        <xsl:variable name="href">
+            <xsl:call-template name="classname2filepath">
+                <xsl:with-param name="classname">
+                    <xsl:apply-templates select="." mode="UTest-classname"/>
+                </xsl:with-param>
+            </xsl:call-template>
+        </xsl:variable>
         <xsl:value-of select="concat($href,'&#10;')"/>
         <xsl:result-document href="{$href}">
             <xsl:apply-templates select="." mode="UTest-define"/>
@@ -75,9 +90,8 @@ information or have any questions.
         <xsl:text>package </xsl:text>
         <xsl:value-of select="$package-name"/>
         <xsl:text>;&#10;&#10;&#10;</xsl:text>
-        <xsl:text>import com.sun.uig.*;&#10;&#10;&#10;</xsl:text>
         <xsl:text>public final class </xsl:text>
-        <xsl:value-of select="uig:UTest-classname(.)"/>
+        <xsl:apply-templates select="." mode="UTest-classname"/>
         <xsl:text><![CDATA[ extends BaseTest {
     private int progressStep;
 
@@ -99,15 +113,14 @@ information or have any questions.
     }
 ]]></xsl:text>
         <xsl:text>    public </xsl:text>
-        <xsl:value-of select="uig:UTest-classname(.)"/>
+        <xsl:apply-templates select="." mode="UTest-classname"/>
         <xsl:text>() {&#10;</xsl:text>
         <xsl:text>        final </xsl:text>
-        <xsl:value-of select="uig:Screen-classname(.)"/>
+        <xsl:apply-templates select="." mode="Screen-classname"/>
         <xsl:text> s = new </xsl:text>
-        <xsl:value-of select="uig:Screen-classname(.)"/>
+        <xsl:apply-templates select="." mode="Screen-classname"/>
         <xsl:text>(&#10;</xsl:text>
         <xsl:apply-templates select="." mode="UTest-screen-props"/>
-        <xsl:text>,&#10;            new StringTable()</xsl:text>
         <xsl:apply-templates select="." mode="UTest-screen-command-listener"/>
         <xsl:text>);&#10;</xsl:text>
         <xsl:text>        BaseTest.screens.show(s);&#10;</xsl:text>
@@ -117,48 +130,41 @@ information or have any questions.
     </xsl:template>
 
 
-    <xsl:function name="uig:UTest-classname" as="xs:string">
-        <xsl:param name="screen" as="element()"/>
-        <xsl:value-of select="concat('Test', uig:Screen-classname($screen))"/>
-    </xsl:function>
+    <xsl:template match="screen" mode="UTest-classname">
+        <xsl:text>Test</xsl:text>
+        <xsl:apply-templates select="." mode="Screen-classname"/>
+    </xsl:template>
 
 
     <xsl:template match="screen" mode="UTest-screen-props">
         <xsl:text>            new ScreenProperties() {&#10;</xsl:text>
         <xsl:text>                public Object get(String key) {&#10;</xsl:text>
         <xsl:text>                    if (false) return null;&#10;</xsl:text>
-        <xsl:variable name="all-props" as="xs:string*">
-            <xsl:variable name="screen" select="." as="element()"/>
-            <xsl:for-each select="uig:get-format-string-elements(.)">
-                <xsl:for-each select="uig:format-string-get-args(.)">
-                    <xsl:value-of>
-                        <xsl:text>                    else if (</xsl:text>
-                        <xsl:value-of select="
-                            concat(
-                                uig:Screen-classname($screen),
-                                '.KEY_',
-                                upper-case(.))"/>
-                        <xsl:text>.equals(key)) return "&lt;</xsl:text>
-                        <xsl:value-of select="."/>
-                        <xsl:text>&gt;";&#10;</xsl:text>
-                    </xsl:value-of>
-                </xsl:for-each>
-            </xsl:for-each>
-        </xsl:variable>
-        <xsl:if test="count($all-props) != 0">
-            <xsl:for-each select="distinct-values($all-props)">
-                <xsl:value-of select="."/>
-            </xsl:for-each>
-        </xsl:if>
+        <xsl:call-template name="uniq">
+            <xsl:with-param name="str">
+                <xsl:apply-templates select="descendant::text" mode="UTest-screen-props"/>
+            </xsl:with-param>
+        </xsl:call-template>
         <xsl:apply-templates select="descendant::dynamic-command|descendant::dynamic-option" mode="UTest-screen-props"/>
         <xsl:text>                    throw new RuntimeException("unexpected key: " + key);&#10;</xsl:text>
         <xsl:text>                }&#10;</xsl:text>
         <xsl:text>            }</xsl:text>
     </xsl:template>
 
+    <xsl:template match="text" mode="UTest-screen-props">
+        <xsl:call-template name="expand">
+            <xsl:with-param name="str" select="."/>
+            <xsl:with-param name="action" select="'utest-get-value'"/>
+            <xsl:with-param name="action-arg0">
+                <xsl:apply-templates select="ancestor::screen" mode="Screen-classname"/>
+                <xsl:text>.</xsl:text>
+            </xsl:with-param>
+        </xsl:call-template>
+    </xsl:template>
+
     <xsl:template match="dynamic-command|dynamic-option" mode="UTest-screen-props">
         <xsl:text>                    else if ("</xsl:text>
-        <xsl:value-of select="uig:Screen-item-id(.)"/>
+        <xsl:apply-templates select="." mode="Screen-command-id"/>
         <xsl:text>".equals(key)) return createDynamicItems(key, </xsl:text>
         <xsl:apply-templates select="." mode="UTest-dynamic-item-max-idx"/>
         <xsl:text>);&#10;</xsl:text>
@@ -172,8 +178,8 @@ information or have any questions.
     </xsl:template>
 
 
-    <xsl:template match="screen" mode="UTest-screen-command-listener"/>
-    <xsl:template match="screen[uig:Screen-class-with-CommandListener(.)]" mode="UTest-screen-command-listener">
+    <xsl:template match="screen[not(descendant::*/@id)]" mode="UTest-screen-command-listener"/>
+    <xsl:template match="screen[descendant::*/@id]" mode="UTest-screen-command-listener">
         <xsl:text>,&#10;</xsl:text>
         <xsl:text>            new CommandListener() {&#10;</xsl:text>
         <xsl:text>                public void onCommand(Screen sender, int commandId) {&#10;</xsl:text>
@@ -181,7 +187,7 @@ information or have any questions.
         <xsl:text>                }&#10;</xsl:text>
         <xsl:text>                public void onDynamicCommand(Screen sender, int commandId, int idx) {&#10;</xsl:text>
         <xsl:text>                    switch (commandId) {&#10;</xsl:text>
-        <xsl:apply-templates select="descendant::*[not(self::progress|self::text-field) and @id]" mode="UTest-screen-command-listener"/>
+        <xsl:apply-templates select="descendant::*[@id]" mode="UTest-screen-command-listener"/>
         <xsl:text>                    default:&#10;</xsl:text>
         <xsl:text>                        throw new RuntimeException("unexpected commandId: " + commandId);&#10;</xsl:text>
         <xsl:text>                    }&#10;</xsl:text>
@@ -191,12 +197,12 @@ information or have any questions.
 
     <xsl:template match="*[@id]" mode="UTest-screen-command-listener">
         <xsl:text>                    case </xsl:text>
-        <xsl:value-of select="uig:Screen-classname(ancestor::screen)"/>
+        <xsl:apply-templates select="ancestor::screen" mode="Screen-classname"/>
         <xsl:text>.</xsl:text>
-        <xsl:value-of select="uig:Screen-item-id(.)"/>
+        <xsl:apply-templates select="." mode="Screen-command-id"/>
         <xsl:text>:&#10;</xsl:text>
         <xsl:text>                        System.out.print("Command: </xsl:text>
-        <xsl:value-of select="uig:Screen-item-id(.)"/>
+        <xsl:apply-templates select="." mode="Screen-command-id"/>
         <xsl:text>");&#10;</xsl:text>
         <xsl:text>                        if (idx != -100) System.out.print(" idx=" + idx);&#10;</xsl:text>
         <xsl:text>                        System.out.println("");&#10;</xsl:text>
@@ -222,9 +228,9 @@ information or have any questions.
 
     <xsl:template match="progress" mode="UTest-screen-progress">
         <xsl:text>                    updateProgress(this, s, </xsl:text>
-        <xsl:value-of select="uig:Screen-classname(ancestor::screen)"/>
+        <xsl:apply-templates select=".." mode="Screen-classname"/>
         <xsl:text>.</xsl:text>
-        <xsl:value-of select="uig:Screen-item-id(.)"/>
+        <xsl:apply-templates select="." mode="Screen-progress-id"/>
         <xsl:text>);&#10;</xsl:text>
     </xsl:template>
 
